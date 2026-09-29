@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Suporte TI - HelpDesk</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 450px;
+            padding: 35px 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            color: #1a365d;
+            font-size: 26px;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+            margin-bottom: -2px;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .alert-danger {
+            background-color: #fde8e8;
+            color: #9b1c1c;
+            border: 1px solid #f8b4b4;
+        }
+
+        .alert-success {
+            background-color: #def7ec;
+            color: #03543f;
+            border: 1px solid #84e1bc;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #4a5568;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Portal de Suporte TI</h1>
+        <p>Central de Atendimento e HelpDesk</p>
+    </div>
+
+    <!-- Mensagens de Alerta (Erro / Sucesso) -->
+    <div th:if="${erro}" class="alert alert-danger" th:text="${erro}"></div>
+    <div th:if="${sucesso}" class="alert alert-success" th:text="${sucesso}"></div>
+
+    <!-- Abas para alternar entre Entrar e Cadastrar -->
+    <div class="tabs">
+        <button type="button" class="tab-btn active" onclick="switchTab('login')">Entrar</button>
+        <button type="button" class="tab-btn" onclick="switchTab('cadastro')">Criar Conta</button>
+    </div>
+
+    <!-- Formulario de Login -->
+    <form id="form-login" class="form-section active" th:action="@{/login}" method="post">
+        <div class="form-group">
+            <label for="login-email">E-mail Institucional</label>
+            <input type="email" id="login-email" name="email" class="form-control" placeholder="seu.nome@empresa.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="login-senha">Senha</label>
+            <input type="password" id="login-senha" name="senha" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-primary">Acessar Portal</button>
+    </form>
+
+    <!-- Formulario de Cadastro -->
+    <form id="form-cadastro" class="form-section" th:action="@{/cadastrar}" th:object="${usuario}" method="post">
+        <div class="form-group">
+            <label for="nome">Nome Completo</label>
+            <input type="text" id="nome" th:field="*{nome}" class="form-control" placeholder="Ex: João Silva" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-mail Institucional</label>
+            <input type="email" id="email" th:field="*{email}" class="form-control" placeholder="seu.nome@empresa.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="departamento">Departamento</label>
+            <input type="text" id="departamento" th:field="*{departamento}" class="form-control" placeholder="Ex: Financeiro, RH, Vendas" required>
+        </div>
+
+        <div class="form-group">
+            <label for="perfil">Perfil de Acesso</label>
+            <select id="perfil" th:field="*{perfil}" class="form-control" required>
+                <option value="" disabled selected>Selecione o perfil...</option>
+                <option value="CLIENTE">Cliente / Solicitante</option>
+                <option value="TECNICO">Técnico de TI</option>
+                <option value="ADMIN">Administrador</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" th:field="*{senha}" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-primary">Finalizar Cadastro</button>
+    </form>
+</div>
+
+<script>
+    function switchTab(tab) {
+        const loginForm = document.getElementById('form-login');
+        const cadastroForm = document.getElementById('form-cadastro');
+        const tabs = document.querySelectorAll('.tab-btn');
+
+        if (tab === 'login') {
+            loginForm.classList.add('active');
+            cadastroForm.classList.remove('active');
+            tabs[0].classList.add('active');
+            tabs[1].classList.remove('active');
+        } else {
+            cadastroForm.classList.add('active');
+            loginForm.classList.remove('active');
+            tabs[1].classList.add('active');
+            tabs[0].classList.remove('active');
+        }
+    }
+</script>
+
+</body>
+</html>
