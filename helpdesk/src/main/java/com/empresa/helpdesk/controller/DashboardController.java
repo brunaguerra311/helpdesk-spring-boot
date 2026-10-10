@@ -2,6 +2,7 @@ package com.empresa.helpdesk.controller;
 
 import com.empresa.helpdesk.model.Perfil;
 import com.empresa.helpdesk.model.Usuario;
+import com.empresa.helpdesk.service.ChamadoService;
 import com.empresa.helpdesk.service.UsuarioService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,9 @@ public class DashboardController {
     @Autowired
     private UsuarioService usuarioService;
 
+    @Autowired
+    private ChamadoService chamadoService;
+
     @GetMapping
     public String dashboard(HttpSession session, Model model) {
         Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
@@ -27,16 +31,25 @@ public class DashboardController {
 
         model.addAttribute("usuarioLogado", usuarioLogado);
 
-        // Se for ADMINISTRADOR, carrega a lista de todos os usuários para o painel de gestão
+        // Visão do ADMINISTRADOR: carrega lista de utilizadores e chamados gerais se necessário
         if (usuarioLogado.getPerfil() == Perfil.ADMIN) {
             model.addAttribute("usuarios", usuarioService.listarTodos());
             model.addAttribute("novoTecnico", new Usuario());
+            model.addAttribute("chamados", chamadoService.listarTodos());
+        }
+        // Visão do TÉCNICO: carrega a fila geral de chamados para atendimento
+        else if (usuarioLogado.getPerfil() == Perfil.TECNICO) {
+            model.addAttribute("chamados", chamadoService.listarTodos());
+        }
+        // Visão do CLIENTE: carrega apenas os chamados abertos pelo próprio cliente
+        else if (usuarioLogado.getPerfil() == Perfil.CLIENTE) {
+            model.addAttribute("chamados", chamadoService.listarPorCliente(usuarioLogado.getId()));
         }
 
         return "dashboard";
     }
 
-    // Rota para o ADMIN cadastrar um novo Técnico ou Admin
+    // Rota para o ADMIN cadastrar novo Técnico ou Admin
     @PostMapping("/admin/cadastrar-tecnico")
     public String cadastrarTecnico(@ModelAttribute("novoTecnico") Usuario novoTecnico,
                                    @RequestParam("perfilDesejado") Perfil perfilDesejado,
@@ -50,7 +63,7 @@ public class DashboardController {
 
         try {
             usuarioService.cadastrarPorAdmin(novoTecnico, perfilDesejado);
-            redirectAttributes.addFlashAttribute("sucesso", "Técnico/Usuário cadastrado com sucesso!");
+            redirectAttributes.addFlashAttribute("sucesso", "Membro da equipa cadastrado com sucesso!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", "Erro ao cadastrar: " + e.getMessage());
         }
@@ -58,7 +71,7 @@ public class DashboardController {
         return "redirect:/dashboard";
     }
 
-    // Rota para o ADMIN excluir um usuário (com proteção contra auto-exclusão)
+    // Rota para o ADMIN excluir utilizador
     @PostMapping("/admin/excluir/{id}")
     public String excluirUsuario(@PathVariable Long id,
                                  HttpSession session,
@@ -71,7 +84,7 @@ public class DashboardController {
 
         try {
             usuarioService.excluirUsuario(id, usuarioLogado.getId());
-            redirectAttributes.addFlashAttribute("sucesso", "Usuário removido com sucesso!");
+            redirectAttributes.addFlashAttribute("sucesso", "Utilizador removido com sucesso!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
@@ -91,10 +104,7 @@ public class DashboardController {
         }
 
         try {
-            // Atualiza a senha na entidade e salva via service
             usuarioService.alterarSenha(usuarioLogado.getId(), novaSenha);
-
-            // Atualiza a senha no objeto da sessão
             usuarioLogado.setSenha(novaSenha);
             session.setAttribute("usuarioLogado", usuarioLogado);
 

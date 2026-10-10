@@ -14,6 +14,9 @@
         .badge-admin { background-color: #dc3545; }
         .badge-tecnico { background-color: #0d6efd; }
         .badge-cliente { background-color: #198754; }
+        .badge-aberto { background-color: #ffc107; color: #000; }
+        .badge-andamento { background-color: #0d6efd; }
+        .badge-concluido { background-color: #198754; }
     </style>
 </head>
 <body>
@@ -26,7 +29,7 @@
         </a>
         <div class="d-flex align-items-center">
                 <span class="text-light me-3">
-                    Olá, <strong th:text="${usuarioLogado.nome}">Usuário</strong>
+                    Olá, <strong th:text="${usuarioLogado.nome}">Utilizador</strong>
                     <span class="badge ms-1"
                           th:classappend="${usuarioLogado.perfil.name() == 'ADMIN' ? 'badge-admin' : (usuarioLogado.perfil.name() == 'TECNICO' ? 'badge-tecnico' : 'badge-cliente')}"
                           th:text="${usuarioLogado.perfil}">PERFIL</span>
@@ -38,7 +41,7 @@
 
 <div class="container my-4">
 
-    <!-- Mensagens de Alerta (Sucesso / Erro) -->
+    <!-- Mensagens de Alerta -->
     <div th:if="${sucesso}" class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i><span th:text="${sucesso}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -49,10 +52,9 @@
     </div>
 
     <!-- ============================================================== -->
-    <!-- VISÃO EXCLUSIVA DO ADMINISTRADOR                               -->
+    <!-- 1. VISÃO DO ADMINISTRADOR                                      -->
     <!-- ============================================================== -->
     <div th:if="${usuarioLogado.perfil.name() == 'ADMIN'}">
-
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 class="fw-bold text-dark"><i class="bi bi-shield-lock-fill text-danger me-2"></i>Painel do Administrador</h3>
             <div>
@@ -65,9 +67,9 @@
             </div>
         </div>
 
-        <!-- Tabela de Gestão de Usuários -->
+        <!-- Tabela de Gestão de Utilizadores -->
         <div class="card card-custom p-4 mb-4">
-            <h5 class="fw-bold mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>Usuários Cadastrados no Sistema</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>Gestão de Utilizadores</h5>
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
@@ -92,9 +94,8 @@
                                           th:text="${user.perfil}">CLIENTE</span>
                         </td>
                         <td class="text-center">
-                            <!-- Desabilita botão de excluir se for o próprio admin logado -->
                             <form th:if="${user.id != usuarioLogado.id}" th:action="@{/dashboard/admin/excluir/{id}(id=${user.id})}" method="post" style="display:inline;">
-                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir este usuário?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir este utilizador?');">
                                     <i class="bi bi-trash-fill"></i> Excluir
                                 </button>
                             </form>
@@ -108,7 +109,118 @@
     </div>
 
     <!-- ============================================================== -->
-    <!-- VISÃO DO CLIENTE / SOLICITANTE                                 -->
+    <!-- 2. VISÃO DO TÉCNICO DE TI                                      -->
+    <!-- ============================================================== -->
+    <div th:if="${usuarioLogado.perfil.name() == 'TECNICO'}">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-dark"><i class="bi bi-tools text-primary me-2"></i>Painel do Técnico - Fila de Chamados</h3>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha">
+                <i class="bi bi-key-fill me-1"></i> Alterar Minha Senha
+            </button>
+        </div>
+
+        <div class="card card-custom p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-ticket-detailed me-2 text-primary"></i>Chamados Registrados no Sistema</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th>#ID</th>
+                        <th>Título / Cliente</th>
+                        <th>Prioridade</th>
+                        <th>Status</th>
+                        <th>Histórico / Mensagens</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c : ${chamados}">
+                        <td th:text="${c.id}">1</td>
+                        <td>
+                            <strong th:text="${c.titulo}">Título</strong><br/>
+                            <small class="text-muted"><i class="bi bi-person me-1"></i><span th:text="${c.cliente != null ? c.cliente.nome : 'N/D'}">Cliente</span></small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary" th:text="${c.prioridade}">MEDIA</span>
+                        </td>
+                        <td>
+                                    <span class="badge"
+                                          th:classappend="${c.status == 'ABERTO' ? 'badge-aberto' : (c.status == 'EM_ANDAMENTO' ? 'badge-andamento' : 'badge-concluido')}"
+                                          th:text="${c.status}">ABERTO</span>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <strong>Técnico Responsável:</strong> <span th:text="${c.tecnico != null ? c.tecnico.nome : 'Não atribuído'}"></span><br/>
+                                <span th:if="${c.respostaTecnica != null}" class="text-dark mt-1 d-block" style="white-space: pre-line;">
+                                            <i class="bi bi-chat-quote-fill me-1 text-primary"></i><strong>Histórico:</strong>
+                                            <span th:text="${c.respostaTecnica}"></span>
+                                        </span>
+                                <span th:if="${c.respostaTecnica == null}" class="text-muted italic">Nenhuma mensagem registrada.</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <!-- Botão para Assumir se estiver Aberto -->
+                            <form th:if="${c.status == 'ABERTO'}" th:action="@{/chamados/tecnico/assumir/{id}(id=${c.id})}" method="post" class="mb-1">
+                                <button type="submit" class="btn btn-sm btn-primary w-100">
+                                    <i class="bi bi-hand-index-thumb"></i> Assumir
+                                </button>
+                            </form>
+
+                            <!-- Botão para responder / atualizar status -->
+                            <button type="button" class="btn btn-sm btn-success w-100" data-bs-toggle="modal" th:data-bs-target="'#modalResponder' + ${c.id}">
+                                <i class="bi bi-chat-left-text-fill"></i> Responder
+                            </button>
+
+                            <!-- Modal de Resposta do Técnico -->
+                            <div class="modal fade" th:id="'modalResponder' + ${c.id}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content text-start">
+                                        <div class="modal-header bg-success text-white">
+                                            <h5 class="modal-title fw-bold">Atendimento - Chamado #<span th:text="${c.id}"></span></h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form th:action="@{/chamados/tecnico/responder/{id}(id=${c.id})}" method="post">
+                                            <div class="modal-body">
+                                                <p class="mb-2 text-muted small"><strong>Descrição inicial do problema:</strong><br/><span th:text="${c.descricao}"></span></p>
+
+                                                <div th:if="${c.respostaTecnica != null}" class="p-2 mb-3 bg-light border rounded small" style="max-height: 150px; overflow-y: auto; white-space: pre-line;">
+                                                    <strong>Histórico de Mensagens:</strong><br/>
+                                                    <span th:text="${c.respostaTecnica}"></span>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Nova Mensagem / Solução</label>
+                                                    <textarea name="respostaTecnica" class="form-control" rows="3" placeholder="Digite sua resposta para o cliente..." required></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Alterar Status</label>
+                                                    <select name="status" class="form-select" required>
+                                                        <option value="EM_ANDAMENTO" th:selected="${c.status == 'EM_ANDAMENTO'}">Em Andamento</option>
+                                                        <option value="CONCLUIDO" th:selected="${c.status == 'CONCLUIDO'}">Concluído</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-success fw-bold">Enviar Resposta</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(chamados)}">
+                        <td colspan="6" class="text-center text-muted py-4">Nenhum chamado encontrado no sistema.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 3. VISÃO DO CLIENTE (Abrir Chamado + Acompanhar + Responder)   -->
     <!-- ============================================================== -->
     <div th:if="${usuarioLogado.perfil.name() == 'CLIENTE'}">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -152,22 +264,94 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Descrição do Problema</label>
-                    <textarea name="descricao" class="form-control" rows="4" placeholder="Descreva em detalhes o que está acontecendo..." required></textarea>
+                    <textarea name="descricao" class="form-control" rows="3" placeholder="Descreva em detalhes o que está acontecendo..." required></textarea>
                 </div>
 
                 <button type="submit" class="btn btn-primary px-4 py-2 fw-bold"><i class="bi bi-send-fill me-2"></i>Enviar Chamado</button>
             </form>
         </div>
+
+        <!-- Tabela de Acompanhamento dos Chamados do Cliente -->
+        <div class="card card-custom p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Os Meus Chamados e Interações</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th>#ID</th>
+                        <th>Título</th>
+                        <th>Status</th>
+                        <th>Histórico / Resposta do Suporte</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="c : ${chamados}">
+                        <td th:text="${c.id}">1</td>
+                        <td th:text="${c.titulo}" class="fw-bold">Título</td>
+                        <td>
+                                    <span class="badge"
+                                          th:classappend="${c.status == 'ABERTO' ? 'badge-aberto' : (c.status == 'EM_ANDAMENTO' ? 'badge-andamento' : 'badge-concluido')}"
+                                          th:text="${c.status}">ABERTO</span>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <strong>Técnico:</strong> <span th:text="${c.tecnico != null ? c.tecnico.nome : 'A aguardar'}"></span><br/>
+                                <span th:if="${c.respostaTecnica != null}" class="text-dark mt-1 d-block" style="white-space: pre-line;">
+                                            <i class="bi bi-chat-quote-fill me-1 text-primary"></i><strong>Histórico:</strong>
+                                            <span th:text="${c.respostaTecnica}"></span>
+                                        </span>
+                                <span th:if="${c.respostaTecnica == null}" class="text-muted italic">Nenhuma resposta enviada ainda.</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <!-- Botão para o Cliente Responder/Enviar nova mensagem -->
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" th:data-bs-target="'#modalClienteResponder' + ${c.id}">
+                                <i class="bi bi-reply-fill"></i> Responder
+                            </button>
+
+                            <!-- Modal de Resposta do Cliente -->
+                            <div class="modal fade" th:id="'modalClienteResponder' + ${c.id}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content text-start">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title fw-bold">Enviar Mensagem - Chamado #<span th:text="${c.id}"></span></h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form th:action="@{/chamados/cliente/responder/{id}(id=${c.id})}" method="post">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Escreva a sua mensagem ou esclarecimento</label>
+                                                    <textarea name="mensagem" class="form-control" rows="4" placeholder="Digite aqui..." required></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary fw-bold">Enviar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(chamados)}">
+                        <td colspan="5" class="text-center text-muted py-4">Ainda não abriu nenhum chamado de suporte.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
 </div>
 
-<!-- MODAL: Cadastrar Técnico / Admin (Apenas para Admin) -->
+<!-- MODAL: Cadastrar Técnico / Admin -->
 <div class="modal fade" id="modalCadastrarTecnico" tabindex="-1" aria-hidden="true" th:if="${usuarioLogado.perfil.name() == 'ADMIN'}">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i>Cadastrar Membro da Equipe</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i>Cadastrar Membro da Equipa</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form th:action="@{/dashboard/admin/cadastrar-tecnico}" th:object="${novoTecnico}" method="post">
