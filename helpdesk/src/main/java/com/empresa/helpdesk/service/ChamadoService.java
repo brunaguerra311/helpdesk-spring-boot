@@ -1,4 +1,3 @@
-
 package com.empresa.helpdesk.service;
 
 import com.empresa.helpdesk.model.Chamado;
@@ -15,23 +14,34 @@ public class ChamadoService {
     @Autowired
     private ChamadoRepository chamadoRepository;
 
-    public Chamado criarChamado(Chamado chamado, Usuario cliente) {
-        chamado.setCliente(cliente);
-        chamado.setStatus("ABERTO");
-        return chamadoRepository.save(chamado);
-    }
-
     public List<Chamado> listarTodos() {
         return chamadoRepository.findAll();
     }
 
-    public List<Chamado> listarPorCliente(Long clienteId) {
-        return chamadoRepository.findByClienteId(clienteId);
-    }
-
     public Chamado buscarPorId(Long id) {
         return chamadoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Chamado não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Chamado não encontrado com ID: " + id));
+    }
+
+    public List<Chamado> listarPorCliente(Long clienteId) {
+        return chamadoRepository.findAll().stream()
+                .filter(c -> c.getCliente() != null && c.getCliente().getId().equals(clienteId))
+                .toList();
+    }
+
+    public List<Chamado> listarPorCliente(Usuario cliente) {
+        if (cliente == null) return List.of();
+        return listarPorCliente(cliente.getId());
+    }
+
+    public Chamado salvar(Chamado chamado) {
+        return chamadoRepository.save(chamado);
+    }
+
+    public Chamado criarChamado(Chamado chamado, Usuario cliente) {
+        chamado.setCliente(cliente);
+        chamado.setStatus("ABERTO");
+        return chamadoRepository.save(chamado);
     }
 
     public Chamado assumirChamado(Long chamadoId, Usuario tecnico) {
@@ -41,8 +51,7 @@ public class ChamadoService {
         return chamadoRepository.save(chamado);
     }
 
-    // Resposta enviada pelo Técnico (com nome real)
-    public Chamado adicionarResposta(Long chamadoId, String respostaTecnica, String novoStatus, Usuario tecnico) {
+    public Chamado adicionarResposta(Long chamadoId, String resposta, String status, Usuario tecnico) {
         Chamado chamado = buscarPorId(chamadoId);
 
         String historicoAtual = chamado.getRespostaTecnica() != null ? chamado.getRespostaTecnica() : "";
@@ -50,14 +59,31 @@ public class ChamadoService {
             historicoAtual += "\n\n";
         }
 
-        String novaInteracao = "[" + tecnico.getNome() + " (Técnico)]: " + respostaTecnica;
+        String novaInteracao = "[" + tecnico.getNome() + " (Técnico)]: " + resposta;
         chamado.setRespostaTecnica(historicoAtual + novaInteracao);
 
-        if (novoStatus != null && !novoStatus.isEmpty()) {
-            chamado.setStatus(novoStatus);
+        if (status != null && !status.isEmpty()) {
+            chamado.setStatus(status);
         }
+
         return chamadoRepository.save(chamado);
     }
 
+    public Chamado clienteResponder(Long chamadoId, String novaMensagem, Usuario cliente) {
+        Chamado chamado = buscarPorId(chamadoId);
 
+        String historicoAtual = chamado.getRespostaTecnica() != null ? chamado.getRespostaTecnica() : "";
+        if (!historicoAtual.isEmpty()) {
+            historicoAtual += "\n\n";
+        }
+
+        String novaInteracao = "[" + cliente.getNome() + " (Cliente)]: " + novaMensagem;
+        chamado.setRespostaTecnica(historicoAtual + novaInteracao);
+
+        if ("CONCLUIDO".equals(chamado.getStatus())) {
+            chamado.setStatus("EM_ANDAMENTO");
+        }
+
+        return chamadoRepository.save(chamado);
+    }
 }

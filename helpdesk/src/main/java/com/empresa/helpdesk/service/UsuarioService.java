@@ -36,7 +36,7 @@ public class UsuarioService {
 
     /**
      * Cadastro ADMINISTRATIVO (Painel do Administrador)
-     * Permite que o Admin cadastre TÉCNICOS ou outros ADMINISTRADORES.
+     * Permitir que o Admin cadastre TÉCNICOS ou outros ADMINISTRADORES.
      */
 
     public void alterarSenha(Long idUsuario, String novaSenhaPura) {
